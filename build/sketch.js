@@ -137,7 +137,8 @@ function updateDithering(value) {
 }
 
 function updateWidth(value) {
-  wasm.updateWidth(value);
+  wasm.changeWidth(value);
+  preC.width = value * 128;
 
   if (uploaded) {
     updateScreen();
@@ -145,7 +146,8 @@ function updateWidth(value) {
 }
 
 function updateHeight(value) {
-  wasm.updateHeight(value);
+  wasm.changeHeight(value);
+  preC.height = value * 128;
 
   if (uploaded) {
     updateScreen();
