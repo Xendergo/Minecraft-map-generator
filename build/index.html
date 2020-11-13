@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Minecraft map generator</title>
+  <script src="jquery-3.5.1.min.js"></script>
+  <script src="loader.js"></script>
+  <style>
+    body {
+      background-color: black;
+      color: white;
+
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    #colors {
+      margin-right: 16px;
+      margin-bottom: 32px;
+    }
+
+    .colors {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    #colorSelectors {
+      display: flex;
+    }
+  </style>
+</head>
+
+<body>
+  <input type="file"
+    accept="image/apng, image/avif, image/gif, image/jpeg, image/png, image/svg+xml, image/webp, image/bmp, image/x-icon, image/tiff"
+    id="file"><br><br>
+  <select name="style" onchange="updateStepMode(this.value)">
+    <option value="flat">
+      Flat
+    </option>
+    <option value="step">
+      Step
+    </option>
+  </select>
+  <label for="style">Map style</label>
+  <input type="checkbox" name="dithering" onchange="updateDithering(this.checked)" checked>
+  <label for="dithering">Enable dithering</label>
+  <input type="checkbox" name="protect" checked>
+  <label for="protect">Protect flammable blocks</label>
+  <input type="number" min=1 max=200 value=1 onchange="updateWidth(this.value)"> x <input type="number" min=1 max=200
+    value=1 onchange="updateHeight(this.value)">
+  <button onclick="downloadSchematic()">Download schematic</button><br><br>
+  <div id="colorSelectors">
+    <div id="colors" class="colors"></div>
+    <div id="colorsShown" class="colors"></div>
+    <div>
+      <canvas id="preview" width=128 height=128></canvas>
+    </div>
+  </div>
+  <canvas id="image" hidden>
+    <script src="sketch.js"></script>
+</body>
+
+</html>
