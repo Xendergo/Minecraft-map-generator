@@ -1,9 +1,10 @@
-export declare function print(arg0: u64): void;
+export declare function print(arg0: i64): void;
 export declare function stringToUtf8(arg0: String): Array<u8>;
 
 export const Array8Id = idof<Array<u8>>();
 export const Uint8Id = idof<Uint8ClampedArray>();
-export const Array32Id = idof<Array<i32>>();
+export const Array16Id = idof<Array<i16>>();
+export const stringArray = idof<Array<String>>();
 
 var enabledColors: Array<bool> = new Array<bool>(58);
 for (let i = enabledColors.length-1; i >= 0; i--) {
@@ -13,12 +14,18 @@ var width: i32 = 1;
 var height: i32 = 1;
 var dithering: bool = true;
 var step: bool = true;
+var protect: bool = true;
 
 var enabledColorsAmt: i32 = 58;
 
 var rColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
 var gColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
 var bColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
+for (let i = 0; i < 3; i++) {
+  rColors.set(i, new Map<i32, i16>());
+  gColors.set(i, new Map<i32, i16>());
+  bColors.set(i, new Map<i32, i16>());
+}
 
 var enabledRColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
 var enabledGColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
@@ -76,6 +83,10 @@ export function changeWidth(w: i32): void {
 
 export function changeHeight(h: i32): void {
   height = h;
+}
+
+export function protectFlammable(value: bool): void {
+  protect = value;
 }
 
 function getColor(r: i16, g: i16, b: i16): Int64Array {
@@ -141,6 +152,33 @@ function getColor(r: i16, g: i16, b: i16): Int64Array {
 }
 
 function getColors(): Int64Array {
+  let len = enabledColors.length;
+  for (let i = 0; i < 3; i++) {
+    enabledRColors.set(i, new Map<i32, i16>());
+    enabledGColors.set(i, new Map<i32, i16>());
+    enabledBColors.set(i, new Map<i32, i16>());
+  }
+
+  let skipped: i32 = 0;
+  for (let i = 0; i < len; i++) {
+    if (enabledColors[i]) {
+      let minusS: i32 = i - skipped;
+      enabledRColors.get(0).set(minusS, rColors.get(0).get(i));
+      enabledRColors.get(1).set(minusS, rColors.get(1).get(i));
+      enabledRColors.get(2).set(minusS, rColors.get(2).get(i));
+      enabledGColors.get(0).set(minusS, gColors.get(0).get(i));
+      enabledGColors.get(1).set(minusS, gColors.get(1).get(i));
+      enabledGColors.get(2).set(minusS, gColors.get(2).get(i));
+      enabledBColors.get(0).set(minusS, bColors.get(0).get(i));
+      enabledBColors.get(1).set(minusS, bColors.get(1).get(i));
+      enabledBColors.get(2).set(minusS, bColors.get(2).get(i));
+    } else {
+      skipped++;
+    }
+  }
+
+  enabledColorsAmt = enabledRColors.get(0).size-1;
+
   len = (width*height) << 14;
   let tempR :Uint8ClampedArray = new Uint8ClampedArray(len);
   let tempG :Uint8ClampedArray = new Uint8ClampedArray(len);
@@ -202,39 +240,10 @@ function getColors(): Int64Array {
 }
 
 export function rerender() :void {
-  const len = enabledColors.length;
-  for (let i = 0; i < 3; i++) {
-    enabledRColors.set(0, new Map<i32, i16>());
-    enabledGColors.set(0, new Map<i32, i16>());
-    enabledBColors.set(0, new Map<i32, i16>());
-    enabledRColors.set(1, new Map<i32, i16>());
-    enabledGColors.set(1, new Map<i32, i16>());
-    enabledBColors.set(1, new Map<i32, i16>());
-    enabledRColors.set(2, new Map<i32, i16>());
-    enabledGColors.set(2, new Map<i32, i16>());
-    enabledBColors.set(2, new Map<i32, i16>());
-  }
-
-  for (let i = 0; i < len; i++) {
-    if (enabledColors[i]) {
-      enabledRColors.get(0).set(i, rColors.get(0).get(i));
-      enabledRColors.get(1).set(i, rColors.get(1).get(i));
-      enabledRColors.get(2).set(i, rColors.get(2).get(i));
-      enabledGColors.get(0).set(i, gColors.get(0).get(i));
-      enabledGColors.get(1).set(i, gColors.get(1).get(i));
-      enabledGColors.get(2).set(i, gColors.get(2).get(i));
-      enabledBColors.get(0).set(i, bColors.get(0).get(i));
-      enabledBColors.get(1).set(i, bColors.get(1).get(i));
-      enabledBColors.get(2).set(i, bColors.get(2).get(i));
-    }
-  }
-
-  enabledColorsAmt = enabledRColors.get(0).size-1;
-
   const indexes = getColors();
 
   for (let i = indexes.length-1; i >= 0; i--) {
-    const mult = <i32>(indexes[i] >> 32);
+    const mult = <i32>(indexes[i] >>> 32);
     const cIndex = <i32>(indexes[i] & 4294967295);
     r[i] = <u8>enabledRColors.get(mult).get(cIndex);
     g[i] = <u8>enabledGColors.get(mult).get(cIndex);
@@ -254,31 +263,12 @@ export function getBlueChannel() :Array<u8> {
   return b;
 }
 
-export function getColorData(red :Array<i32>, green :Array<i32>, blue :Array<i32>) :void {
+export function getColorData(red :Array<i16>, green :Array<i16>, blue :Array<i16>, mult: i32) :void {
   const len = red.length;
-
-  for (let i = 0; i < 3; i++) {
-    rColors.set(0, new Map<i32, i16>());
-    gColors.set(0, new Map<i32, i16>());
-    bColors.set(0, new Map<i32, i16>());
-    rColors.set(1, new Map<i32, i16>());
-    gColors.set(1, new Map<i32, i16>());
-    bColors.set(1, new Map<i32, i16>());
-    rColors.set(2, new Map<i32, i16>());
-    gColors.set(2, new Map<i32, i16>());
-    bColors.set(2, new Map<i32, i16>());
-  }
-
   for (let i = 0; i < len; i++) {
-    rColors.get(0).set(i, <i16>(red[i] * multipliers[0] / 255));
-    rColors.get(1).set(i, <i16>(red[i] * multipliers[1] / 255));
-    rColors.get(2).set(i, <i16>(red[i] * multipliers[2] / 255));
-    gColors.get(0).set(i, <i16>(green[i] * multipliers[0] / 255));
-    gColors.get(1).set(i, <i16>(green[i] * multipliers[1] / 255));
-    gColors.get(2).set(i, <i16>(green[i] * multipliers[2] / 255));
-    bColors.get(0).set(i, <i16>(blue[i] * multipliers[0] / 255));
-    bColors.get(1).set(i, <i16>(blue[i] * multipliers[1] / 255));
-    bColors.get(2).set(i, <i16>(blue[i] * multipliers[2] / 255));
+    rColors.get(mult).set(i, red[i]);
+    gColors.get(mult).set(i, green[i]);
+    bColors.get(mult).set(i, blue[i]);
   }
 }
 
@@ -304,7 +294,10 @@ function clamp(v: i64): u8 {
   return <u8>(min(max(v, 0), 255));
 }
 
-export function compile(): Uint8ClampedArray {
+export function compile(blocks: Array<String>): Uint8ClampedArray {
+  const indexes = getColors();
+  const mapBlocks: Array<Array<String>> = new Array<Array<String>>();
+  const mapOffsets: Array<Array<i16>> = new Array<Array<i16>>();
   const nbt = new NBT("", true, compound, true);
 
   return nbt.toUint8Array(nbt.compile());

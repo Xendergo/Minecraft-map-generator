@@ -1,7 +1,7 @@
 {
   "colors": {
     "127, 178, 56": ["grass_block", "slime_block"],
-    "247, 233, 263": ["sand", "birch_planks", "sandstone", "glowstone", "end_stone", "end_stone_bricks", "bone_block"],
+    "247, 233, 163": ["sand", "birch_planks", "sandstone", "glowstone", "end_stone", "end_stone_bricks", "bone_block"],
     "199, 199, 199": ["cobweb", "mushroom_stem"],
     "255, 0, 0": ["lava", "tnt", "redstone_block"],
     "160, 160, 255": ["ice", "frosted_ice", "packed_ice", "blue_ice"],

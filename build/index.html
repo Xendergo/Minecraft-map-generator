@@ -4,6 +4,8 @@
 <head>
   <title>Minecraft map generator</title>
   <script src="jquery-3.5.1.min.js"></script>
+  <!--Zlib port to js, https://github.com/nodeca/pako-->
+  <script src="pako.min.js"></script>
   <script src="loader.js"></script>
   <style>
     body {
@@ -50,7 +52,7 @@
   <input type="checkbox" name="dithering" id="dithering" onchange="updateDithering(this.checked)" checked>
   <label for="dithering">Enable dithering</label>
   <input type="checkbox" name="protect" id="protect" checked>
-  <label for="protect">Protect flammable blocks</label>
+  <label for="protect" id="protect" onchange="protectFlammable(this.checked)">Protect flammable blocks</label>
   <input type="number" min=1 max=200 value=1 onchange="updateWidth(this.value)" id="width"> x <input type="number" min=1
     max=200 value=1 onchange="updateHeight(this.value)" id="height">
   <button onclick="updateScreen()">Update preview</button>

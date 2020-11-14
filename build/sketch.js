@@ -57,18 +57,22 @@ fetch("./colors.json").then(async (res) => {
         b.push(color[2]);
       }
 
-      const rPtr = wasm.__retain(wasm.__newArray(wasm.Array32Id, r));
-      const gPtr = wasm.__retain(wasm.__newArray(wasm.Array32Id, g));
-      const bPtr = wasm.__retain(wasm.__newArray(wasm.Array32Id, b));
-      wasm.getColorData(rPtr, gPtr, bPtr);
-      wasm.__release(rPtr);
-      wasm.__release(gPtr);
-      wasm.__release(bPtr);
+      for (let i = 0; i < 3; i++) {
+        const mult = multipliers[i];
+        const rPtr = wasm.__retain(wasm.__newArray(wasm.Array16Id, r.map(v => v * mult)));
+        const gPtr = wasm.__retain(wasm.__newArray(wasm.Array16Id, g.map(v => v * mult)));
+        const bPtr = wasm.__retain(wasm.__newArray(wasm.Array16Id, b.map(v => v * mult)));
+        wasm.getColorData(rPtr, gPtr, bPtr, i);
+        wasm.__release(rPtr);
+        wasm.__release(gPtr);
+        wasm.__release(bPtr);
+      }
 
       updateDithering($("#dithering")[0].checked);
       updateHeight($("#height").val());
       updateStepMode($("#step").val());
       updateWidth($("#width").val());
+      protectFlammable($("#protect")[0].checked);
     });
 });
 
@@ -140,13 +144,30 @@ function updateHeight(value) {
   preC.height = value * 128;
 }
 
+function protectFlammable(value) {
+  wasm.protectFlammable(value);
+}
+
 function downloadSchematic() {
-  const arrayPtr = wasm.compile();
-  window.open(URL.createObjectURL(new File([wasm.__getUint8ClampedArray(arrayPtr).buffer], "map.litematic", {
-    type: "application/octet-stream"
-  })), "_self");
-  console.log(wasm.__getUint8ClampedArray(arrayPtr));
-  wasm.__release(arrayPtr);
+  if (uploaded) {
+    // Get the list of blocks to use for each color
+    const len = Object.keys(colors).length;
+    const blocks = [];
+    for (let i = 0; i < len; i++) {
+      blocks.push("minecraft:" + $(`#${i}`).val());
+    }
+
+    // Send the list and get the litematic file
+    const blocksPtr = wasm.__retain(wasm.__newArray(wasm.stringArray, blocks));
+    const arrayPtr = wasm.compile(blocksPtr);
+    wasm.__release(blocksPtr);
+
+    // Gzip & download the thingy
+    window.open(URL.createObjectURL(new File([pako.gzip(wasm.__getUint8ClampedArray(arrayPtr)).buffer], "map.litematic", {
+      type: "application/octet-stream"
+    })), "_self");
+    wasm.__release(arrayPtr);
+  }
 }
 
 async function updateScreen() {
