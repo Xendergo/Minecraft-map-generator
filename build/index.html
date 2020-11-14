@@ -27,6 +27,10 @@
     #colorSelectors {
       display: flex;
     }
+
+    #preview {
+      margin-left: 16px;
+    }
   </style>
 </head>
 
@@ -34,7 +38,7 @@
   <input type="file"
     accept="image/apng, image/avif, image/gif, image/jpeg, image/png, image/svg+xml, image/webp, image/bmp, image/x-icon, image/tiff"
     id="file"><br><br>
-  <select name="style" onchange="updateStepMode(this.value)">
+  <select name="style" onchange="updateStepMode(this.value)" id="step">
     <option value="flat">
       Flat
     </option>
@@ -43,12 +47,13 @@
     </option>
   </select>
   <label for="style">Map style</label>
-  <input type="checkbox" name="dithering" onchange="updateDithering(this.checked)" checked>
+  <input type="checkbox" name="dithering" id="dithering" onchange="updateDithering(this.checked)" checked>
   <label for="dithering">Enable dithering</label>
-  <input type="checkbox" name="protect" checked>
+  <input type="checkbox" name="protect" id="protect" checked>
   <label for="protect">Protect flammable blocks</label>
-  <input type="number" min=1 max=200 value=1 onchange="updateWidth(this.value)"> x <input type="number" min=1 max=200
-    value=1 onchange="updateHeight(this.value)">
+  <input type="number" min=1 max=200 value=1 onchange="updateWidth(this.value)" id="width"> x <input type="number" min=1
+    max=200 value=1 onchange="updateHeight(this.value)" id="height">
+  <button onclick="updateScreen()">Update preview</button>
   <button onclick="downloadSchematic()">Download schematic</button><br><br>
   <div id="colorSelectors">
     <div id="colors" class="colors"></div>

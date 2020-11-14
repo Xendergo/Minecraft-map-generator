@@ -3,6 +3,7 @@ export declare function stringToUtf8(arg0: String): Array<u8>;
 
 export const Array8Id = idof<Array<u8>>();
 export const Uint8Id = idof<Uint8ClampedArray>();
+export const Array32Id = idof<Array<i32>>();
 
 var enabledColors: Array<bool> = new Array<bool>(58);
 for (let i = enabledColors.length-1; i >= 0; i--) {
@@ -13,9 +14,15 @@ var height: i32 = 1;
 var dithering: bool = true;
 var step: bool = true;
 
-var rColors :Array<u8>;
-var gColors :Array<u8>;
-var bColors :Array<u8>;
+var enabledColorsAmt: i32 = 58;
+
+var rColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
+var gColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
+var bColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
+
+var enabledRColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
+var enabledGColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
+var enabledBColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
 
 var len: i32 = (width*height) << 14;
 var r = new Array<u8>(len);
@@ -28,7 +35,7 @@ var imgR = new Array<u8>();
 var imgG = new Array<u8>();
 var imgB = new Array<u8>();
 
-const multipliers: Uint8Array = new Uint8Array(3);
+const multipliers = new Int32Array(3);
 multipliers[0] = 255;
 multipliers[1] = 220;
 multipliers[2] = 180;
@@ -73,27 +80,25 @@ export function changeHeight(h: i32): void {
 
 function getColor(r: i16, g: i16, b: i16): Int64Array {
   if (step) {
-    let score: u16 = 765;
+    let score: i16 = 765;
     let scoreR: i16 = 255;
     let scoreG: i16 = 255;
     let scoreB: i16 = 255;
     let index: i32 = 0;
-    let stepAmt: u8 = 0;
-    for (let i = enabledColors.length-1; i >= 0; i--) {
-      for (let j: u8 = 0; j < 3; j++) {
-        if (enabledColors[i]) {
-          const newScoreR: i16 = r-<i16>remap(rColors[i], 0, 255, 0, multipliers[j]);
-          const newScoreG: i16 = g-<i16>remap(gColors[i], 0, 255, 0, multipliers[j]);
-          const newScoreB: i16 = b-<i16>remap(bColors[i], 0, 255, 0, multipliers[j]);
-          const newScore: u16 = abs(newScoreR)+abs(newScoreG)+abs(newScoreB);
-          if (newScore < score) {
-            scoreR = newScoreR;
-            scoreG = newScoreG;
-            scoreB = newScoreB;
-            score = newScore;
-            index = i;
-            stepAmt = j;
-          }
+    let stepAmt: i32 = 0;
+    for (let i = enabledColorsAmt; i >= 0; i--) {
+      for (let j: i32 = 0; j < 3; j++) {
+        const newScoreR: i16 = r-enabledRColors.get(j).get(i);
+        const newScoreG: i16 = g-enabledGColors.get(j).get(i);
+        const newScoreB: i16 = b-enabledBColors.get(j).get(i);
+        const newScore: i16 = abs(newScoreR)+abs(newScoreG)+abs(newScoreB);
+        if (newScore < score) {
+          scoreR = newScoreR;
+          scoreG = newScoreG;
+          scoreB = newScoreB;
+          score = newScore;
+          index = i;
+          stepAmt = j;
         }
       }
     }
@@ -105,25 +110,23 @@ function getColor(r: i16, g: i16, b: i16): Int64Array {
     ret[3] = <i64>scoreB;
     return ret;
   } else {
-    let score: u16 = 765;
+    let score: i16 = 765;
     let scoreR: i16 = 255;
     let scoreG: i16 = 255;
     let scoreB: i16 = 255;
     let index: i32 = 0;
-    for (let i = enabledColors.length-1; i >= 0; i--) {
-      if (enabledColors[i]) {
-        const newScoreR: i16 = r-<i16>remap(rColors[i], 0, 255, 0, multipliers[1]);
-        const newScoreG: i16 = g-<i16>remap(gColors[i], 0, 255, 0, multipliers[1]);
-        const newScoreB: i16 = b-<i16>remap(bColors[i], 0, 255, 0, multipliers[1]);
-        const newScore: u16 = abs(newScoreR)+abs(newScoreG)+abs(newScoreB);
+    for (let i = enabledColorsAmt; i >= 0; i--) {
+      const newScoreR: i16 = r-enabledRColors.get(1).get(i);
+      const newScoreG: i16 = g-enabledGColors.get(1).get(i);
+      const newScoreB: i16 = b-enabledBColors.get(1).get(i);
+      const newScore: i16 = abs(newScoreR)+abs(newScoreG)+abs(newScoreB);
 
-        if (newScore < score) {
-          scoreR = newScoreR;
-          scoreG = newScoreG;
-          scoreB = newScoreB;
-          score = newScore;
-          index = i;
-        }
+      if (newScore < score) {
+        scoreR = newScoreR;
+        scoreG = newScoreG;
+        scoreB = newScoreB;
+        score = newScore;
+        index = i;
       }
     }
 
@@ -147,7 +150,7 @@ function getColors(): Int64Array {
   const pixelsWide = width << 7;
   const pixelsTall = height << 7;
   for (let i :i32 = 0; i < len; i++) {
-    const j = remap(i/pixelsWide, 0, pixelsTall, 0, imgHeight)*imgWidth+remap(i%pixelsWide, 0, pixelsTall, 0, imgWidth);
+    const j = remap(i/pixelsWide, 0, pixelsTall, 0, imgHeight)*imgWidth+remap(i%pixelsWide, 0, pixelsWide, 0, imgWidth);
     tempR[i] = imgR[j];
     tempG[i] = imgG[j];
     tempB[i] = imgB[j];
@@ -199,14 +202,43 @@ function getColors(): Int64Array {
 }
 
 export function rerender() :void {
+  const len = enabledColors.length;
+  for (let i = 0; i < 3; i++) {
+    enabledRColors.set(0, new Map<i32, i16>());
+    enabledGColors.set(0, new Map<i32, i16>());
+    enabledBColors.set(0, new Map<i32, i16>());
+    enabledRColors.set(1, new Map<i32, i16>());
+    enabledGColors.set(1, new Map<i32, i16>());
+    enabledBColors.set(1, new Map<i32, i16>());
+    enabledRColors.set(2, new Map<i32, i16>());
+    enabledGColors.set(2, new Map<i32, i16>());
+    enabledBColors.set(2, new Map<i32, i16>());
+  }
+
+  for (let i = 0; i < len; i++) {
+    if (enabledColors[i]) {
+      enabledRColors.get(0).set(i, rColors.get(0).get(i));
+      enabledRColors.get(1).set(i, rColors.get(1).get(i));
+      enabledRColors.get(2).set(i, rColors.get(2).get(i));
+      enabledGColors.get(0).set(i, gColors.get(0).get(i));
+      enabledGColors.get(1).set(i, gColors.get(1).get(i));
+      enabledGColors.get(2).set(i, gColors.get(2).get(i));
+      enabledBColors.get(0).set(i, bColors.get(0).get(i));
+      enabledBColors.get(1).set(i, bColors.get(1).get(i));
+      enabledBColors.get(2).set(i, bColors.get(2).get(i));
+    }
+  }
+
+  enabledColorsAmt = enabledRColors.get(0).size-1;
+
   const indexes = getColors();
 
   for (let i = indexes.length-1; i >= 0; i--) {
-    const mult = multipliers[<i32>(indexes[i] >> 32)];
+    const mult = <i32>(indexes[i] >> 32);
     const cIndex = <i32>(indexes[i] & 4294967295);
-    r[i] = <u8>remap(rColors[cIndex], 0, 255, 0, mult);
-    g[i] = <u8>remap(gColors[cIndex], 0, 255, 0, mult);
-    b[i] = <u8>remap(bColors[cIndex], 0, 255, 0, mult);
+    r[i] = <u8>enabledRColors.get(mult).get(cIndex);
+    g[i] = <u8>enabledGColors.get(mult).get(cIndex);
+    b[i] = <u8>enabledBColors.get(mult).get(cIndex);
   }
 }
 
@@ -222,10 +254,32 @@ export function getBlueChannel() :Array<u8> {
   return b;
 }
 
-export function getColorData(red :Array<u8>, green :Array<u8>, blue :Array<u8>) :void {
-  rColors = red;
-  gColors = green;
-  bColors = blue;
+export function getColorData(red :Array<i32>, green :Array<i32>, blue :Array<i32>) :void {
+  const len = red.length;
+
+  for (let i = 0; i < 3; i++) {
+    rColors.set(0, new Map<i32, i16>());
+    gColors.set(0, new Map<i32, i16>());
+    bColors.set(0, new Map<i32, i16>());
+    rColors.set(1, new Map<i32, i16>());
+    gColors.set(1, new Map<i32, i16>());
+    bColors.set(1, new Map<i32, i16>());
+    rColors.set(2, new Map<i32, i16>());
+    gColors.set(2, new Map<i32, i16>());
+    bColors.set(2, new Map<i32, i16>());
+  }
+
+  for (let i = 0; i < len; i++) {
+    rColors.get(0).set(i, <i16>(red[i] * multipliers[0] / 255));
+    rColors.get(1).set(i, <i16>(red[i] * multipliers[1] / 255));
+    rColors.get(2).set(i, <i16>(red[i] * multipliers[2] / 255));
+    gColors.get(0).set(i, <i16>(green[i] * multipliers[0] / 255));
+    gColors.get(1).set(i, <i16>(green[i] * multipliers[1] / 255));
+    gColors.get(2).set(i, <i16>(green[i] * multipliers[2] / 255));
+    bColors.get(0).set(i, <i16>(blue[i] * multipliers[0] / 255));
+    bColors.get(1).set(i, <i16>(blue[i] * multipliers[1] / 255));
+    bColors.get(2).set(i, <i16>(blue[i] * multipliers[2] / 255));
+  }
 }
 
 export function getImgData(width: i32, height: i32, imgData: Array<u8>): void {
@@ -247,7 +301,7 @@ function remap(value: i32, low1: i32, high1: i32, low2: i32, high2: i32): i32 {
 }
 
 function clamp(v: i64): u8 {
-  return <u8>(v < 0 ? 0 : (v > 255 ? 255 : v));
+  return <u8>(min(max(v, 0), 255));
 }
 
 export function compile(): Uint8ClampedArray {

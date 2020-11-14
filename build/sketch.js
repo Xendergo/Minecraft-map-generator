@@ -1,5 +1,4 @@
 "use strict";
-
 const imageC = document.getElementById("image");
 const imageDraw = imageC.getContext("2d");
 
@@ -58,13 +57,18 @@ fetch("./colors.json").then(async (res) => {
         b.push(color[2]);
       }
 
-      const rPtr = wasm.__retain(wasm.__newArray(wasm.Array8Id, r));
-      const gPtr = wasm.__retain(wasm.__newArray(wasm.Array8Id, g));
-      const bPtr = wasm.__retain(wasm.__newArray(wasm.Array8Id, b));
+      const rPtr = wasm.__retain(wasm.__newArray(wasm.Array32Id, r));
+      const gPtr = wasm.__retain(wasm.__newArray(wasm.Array32Id, g));
+      const bPtr = wasm.__retain(wasm.__newArray(wasm.Array32Id, b));
       wasm.getColorData(rPtr, gPtr, bPtr);
       wasm.__release(rPtr);
       wasm.__release(gPtr);
       wasm.__release(bPtr);
+
+      updateDithering($("#dithering")[0].checked);
+      updateHeight($("#height").val());
+      updateStepMode($("#step").val());
+      updateWidth($("#width").val());
     });
 });
 
@@ -116,42 +120,24 @@ function upload() {
 
 function updateColors(i) {
   wasm.enableColor(i, $(`#${i}`).val() !== "none");
-  if (uploaded) {
-    updateScreen();
-  }
 }
 
 function updateStepMode(value) {
   wasm.changeStep(value === "step");
-  if (uploaded) {
-    updateScreen();
-  }
 }
 
 function updateDithering(value) {
   wasm.changeDithering(value);
-
-  if (uploaded) {
-    updateScreen();
-  }
 }
 
 function updateWidth(value) {
   wasm.changeWidth(value);
   preC.width = value * 128;
-
-  if (uploaded) {
-    updateScreen();
-  }
 }
 
 function updateHeight(value) {
   wasm.changeHeight(value);
   preC.height = value * 128;
-
-  if (uploaded) {
-    updateScreen();
-  }
 }
 
 function downloadSchematic() {
@@ -163,33 +149,34 @@ function downloadSchematic() {
   wasm.__release(arrayPtr);
 }
 
-function updateScreen() {
-  wasm.rerender();
+async function updateScreen() {
+  if (uploaded) {
+    wasm.rerender();
 
-  // wacky pointer stuff    https://www.assemblyscript.org/loader.html#reading-arrays
-  const rPtr = wasm.getRedChannel();
-  const gPtr = wasm.getGreenChannel();
-  const bPtr = wasm.getBlueChannel();
-  const r = wasm.__getArray(rPtr);
-  const g = wasm.__getArray(gPtr);
-  const b = wasm.__getArray(bPtr);
-  wasm.__release(r);
-  wasm.__release(g);
-  wasm.__release(b);
+    // wacky pointer stuff    https://www.assemblyscript.org/loader.html#reading-arrays
+    const rPtr = wasm.getRedChannel();
+    const gPtr = wasm.getGreenChannel();
+    const bPtr = wasm.getBlueChannel();
+    const r = wasm.__getArray(rPtr);
+    const g = wasm.__getArray(gPtr);
+    const b = wasm.__getArray(bPtr);
+    wasm.__release(r);
+    wasm.__release(g);
+    wasm.__release(b);
 
-  const imageData = preDraw.getImageData(0, 0, preC.width, preC.height);
-  const pixels = imageData.data;
+    const imageData = preDraw.getImageData(0, 0, preC.width, preC.height);
+    const pixels = imageData.data;
 
-  for (let i = pixels.length - 4; i >= 0; i -= 4) {
-    let j = i / 4;
-    pixels[i + 0] = r[j];
-    pixels[i + 1] = g[j];
-    pixels[i + 2] = b[j];
-    pixels[i + 3] = 255;
+    for (let i = pixels.length - 4; i >= 0; i -= 4) {
+      let j = i / 4;
+      pixels[i + 0] = r[j];
+      pixels[i + 1] = g[j];
+      pixels[i + 2] = b[j];
+      pixels[i + 3] = 255;
+    }
+
+    preDraw.putImageData(imageData, 0, 0);
   }
-  console.log(pixels);
-
-  preDraw.putImageData(imageData, 0, 0);
 }
 
 // https://coolaj86.com/articles/unicode-string-to-a-utf-8-typed-array-buffer-in-javascript/
