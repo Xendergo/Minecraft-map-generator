@@ -34,6 +34,8 @@ var enabledGColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
 var enabledBColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
 var skippedArray: Array<i32>;
 
+const flammableStr = new Array<String>();
+
 var len: i32 = (width*height) << 14;
 var r = new Array<u8>(len);
 var g = new Array<u8>(len);
@@ -277,6 +279,12 @@ export function getColorData(red :Array<i16>, green :Array<i16>, blue :Array<i16
   }
 }
 
+export function getFlammable(flammableBlocks: Array<String>): void {
+  for (let i = flammableBlocks.length-1; i >= 0; i--) {
+    flammableStr.push(flammableBlocks[i]);
+  }
+}
+
 export function getImgData(width: i32, height: i32, imgData: Array<u8>): void {
   imgWidth = width;
   imgHeight = height;
@@ -335,26 +343,26 @@ export function compile(blocks: Array<String>): Uint8ClampedArray {
     let total: i16 = 0;
     let min: i16 = 256;
     // Convert offsets to y values & calculate min y value
-    for (let j = 128; j >= 1; j--) {
-      const pOffset = mapOffsets[i][j]
+    mapBlocks[i][0] = 34; // Add a netherrack end cap to keep the colors at the end accurate
+    for (let j = 128; j >= 0; j--) {
+      const pOffset = mapOffsets[i][j];
       mapOffsets[i][j] = total;
-      total += pOffset;
-      
+
       if (total < min) {
         min = total;
       }
+
+      total += pOffset;
     }
 
-    mapOffsets[i][0] = total;
-    mapBlocks[i][0] = 34;
-    
+
     let newMax: i16 = 0;
     // Move the lines so that their lowest point is 0 & calculate max y value
     for (let j = 0; j < 129; j++) {
       mapOffsets[i][j] -= min;
 
       if (mapOffsets[i][j] > newMax) {
-        newMax =  mapOffsets[i][j];
+        newMax = mapOffsets[i][j];
       }
     }
 
@@ -363,7 +371,7 @@ export function compile(blocks: Array<String>): Uint8ClampedArray {
     }
   }
 
-  max+=3; // Providing more room for fire protection
+  max += 3; // Providing more room for fire protection
 
   printStr("Converting to NBT...");
   let totalBlocks: i32 = mapW * mapH;
@@ -379,6 +387,11 @@ export function compile(blocks: Array<String>): Uint8ClampedArray {
   
   const palette = new Array<String>();
   palette.push("minecraft:air");
+  if (protect) {
+    palette.push("minecraft:glass");
+  }
+
+  const flammable = new Array<i32>();
   
   const blocksList = new Array<Array<Array<i64>>>(<i32>x);
   for (let i = 0; i < x; i++) {
@@ -395,8 +408,50 @@ export function compile(blocks: Array<String>): Uint8ClampedArray {
       if (v == -1) {
         v = palette.length;
         palette.push(blocks[mapBlocks[i][j]]);
+
+        if (protect && flammableStr.includes(blocks[mapBlocks[i][j]])) {
+          flammable.push(v);
+        }
       }
       blocksList[i+1][j][mapOffsets[i][j]+1] = v;
+    }
+  }
+
+  // Cover up flammable blocks so they can't get burned by lightning or something
+  if (protect) {
+    printStr("Covering up flammable blocks...");
+    for (let i = 0; i < x; i++) {
+      for (let j = 0; j < z; j++) {
+        for (let k = 0; k < y; k++) {
+          if (flammable.includes(<i32>blocksList[i][j][k])) {
+            print(0);
+            // Check every block adjacent to this one and set it to glass if it's air
+            if (blocksList[i+1][j][k] == 0) {
+              blocksList[i+1][j][k] = 1;
+            }
+
+            if (blocksList[i-1][j][k] == 0) {
+              blocksList[i-1][j][k] = 1;
+            }
+
+            if (blocksList[i][j+1][k] == 0) {
+              blocksList[i][j+1][k] = 1;
+            }
+
+            if (blocksList[i][j-1][k] == 0) {
+              blocksList[i][j-1][k] = 1;
+            }
+
+            if (blocksList[i][j][k+1] == 0) {
+              blocksList[i][j][k+1] = 1;
+            }
+
+            if (blocksList[i][j][k-1] == 0) {
+              blocksList[i][j][k-1] = 1;
+            }
+          }
+        }
+      }
     }
   }
 

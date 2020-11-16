@@ -68,6 +68,8 @@ fetch("./colors.json").then(async (res) => {
         wasm.__release(bPtr);
       }
 
+      wasm.getFlammable(wasm.__retain(wasm.__newArray(wasm.stringArrayId, flammable.map(v => wasm.__newString("minecraft:" + v)))));
+
       updateDithering($("#dithering")[0].checked);
       updateHeight($("#height").val());
       updateStepMode($("#step").val());
