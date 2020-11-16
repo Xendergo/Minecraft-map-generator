@@ -41,7 +41,7 @@ fetch("./colors.json").then(async (res) => {
     selector.appendTo("#colors");
   }
 
-  loader.instantiate(fetch('untouched.wasm'), importObject)
+  loader.instantiate(fetch('optimized.wasm'), importObject)
     .then((thingy) => {
       wasm = thingy.exports;
 
