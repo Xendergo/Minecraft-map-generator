@@ -1,10 +1,12 @@
 export declare function print(arg0: i64): void;
+export declare function printStr(arg0: String): void;
+export declare function printStrArray(arg0: Array<String>): void;
 export declare function stringToUtf8(arg0: String): Array<u8>;
 
 export const Array8Id = idof<Array<u8>>();
 export const Uint8Id = idof<Uint8ClampedArray>();
 export const Array16Id = idof<Array<i16>>();
-export const stringArray = idof<Array<String>>();
+export const stringArrayId = idof<Array<String>>();
 
 var enabledColors: Array<bool> = new Array<bool>(58);
 for (let i = enabledColors.length-1; i >= 0; i--) {
@@ -30,6 +32,7 @@ for (let i = 0; i < 3; i++) {
 var enabledRColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
 var enabledGColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
 var enabledBColors :Map<i32, Map<i32, i16>> = new Map<i32, Map<i32, i16>>();
+var skippedArray: Array<i32>;
 
 var len: i32 = (width*height) << 14;
 var r = new Array<u8>(len);
@@ -115,7 +118,7 @@ function getColor(r: i16, g: i16, b: i16): Int64Array {
     }
 
     const ret: Int64Array = new Int64Array(4);
-    ret[0] = <i64>index | (<i64>stepAmt << 32);
+    ret[0] = <i64>(index+skippedArray[index]) | (<i64>stepAmt << 32);
     ret[1] = <i64>scoreR;
     ret[2] = <i64>scoreG;
     ret[3] = <i64>scoreB;
@@ -142,7 +145,7 @@ function getColor(r: i16, g: i16, b: i16): Int64Array {
     }
 
     const ret: Int64Array = new Int64Array(4);
-    ret[0] = <i64>index | (1 << 32);
+    ret[0] = <i64>(index+skippedArray[index]) | (1 << 32);
     ret[1] = <i64>scoreR;
     ret[2] = <i64>scoreG;
     ret[3] = <i64>scoreB;
@@ -159,6 +162,7 @@ function getColors(): Int64Array {
     enabledBColors.set(i, new Map<i32, i16>());
   }
 
+  skippedArray = new Array<i32>();
   let skipped: i32 = 0;
   for (let i = 0; i < len; i++) {
     if (enabledColors[i]) {
@@ -172,6 +176,7 @@ function getColors(): Int64Array {
       enabledBColors.get(0).set(minusS, bColors.get(0).get(i));
       enabledBColors.get(1).set(minusS, bColors.get(1).get(i));
       enabledBColors.get(2).set(minusS, bColors.get(2).get(i));
+      skippedArray.push(skipped);
     } else {
       skipped++;
     }
@@ -245,9 +250,9 @@ export function rerender() :void {
   for (let i = indexes.length-1; i >= 0; i--) {
     const mult = <i32>(indexes[i] >>> 32);
     const cIndex = <i32>(indexes[i] & 4294967295);
-    r[i] = <u8>enabledRColors.get(mult).get(cIndex);
-    g[i] = <u8>enabledGColors.get(mult).get(cIndex);
-    b[i] = <u8>enabledBColors.get(mult).get(cIndex);
+    r[i] = <u8>rColors.get(mult).get(cIndex);
+    g[i] = <u8>gColors.get(mult).get(cIndex);
+    b[i] = <u8>bColors.get(mult).get(cIndex);
   }
 }
 
@@ -295,10 +300,195 @@ function clamp(v: i64): u8 {
 }
 
 export function compile(blocks: Array<String>): Uint8ClampedArray {
+  printStr("Getting color data...");
   const indexes = getColors();
-  const mapBlocks: Array<Array<String>> = new Array<Array<String>>();
-  const mapOffsets: Array<Array<i16>> = new Array<Array<i16>>();
+  
+  printStr("Converting to map data...");
+  const mapW = width << 7; // *128
+  const mapH = height << 7;
+  
+  const mapBlocks: Array<Array<i32>> = new Array<Array<i32>>(mapW*height);
+  let len = mapW*height;
+  for (let i = 0; i < len; i++) {
+    mapBlocks[i] = new Array<i32>(129);
+    mapBlocks[i].fill(0);
+  }
+  const mapOffsets: Array<Array<i16>> = new Array<Array<i16>>(mapW*height);
+  for (let i = 0; i < len; i++) {
+    mapOffsets[i] = new Array<i16>(129);
+    mapOffsets[i].fill(0);
+  }
+  const offset = mapW*height;
+
+  len = indexes.length;
+  for (let i: i32 = 0; i < len; i++) {
+    // Put 128x128 squares on a single line
+    const row = (i / mapW) >> 7;
+    const x = (i % mapW) + row * mapW;
+    const y = (i / mapW) & 0b1111111;
+    mapBlocks[x][y+1] = <i32>(indexes[i] & 4294967295);
+    mapOffsets[x][y+1] = <i16>((indexes[i] >>> 32)-1);
+  }
+
+  let max: i16 = 0;
+  for (let i = 0; i < offset; i++) {
+    let total: i16 = 0;
+    let min: i16 = 256;
+    // Convert offsets to y values & calculate min y value
+    for (let j = 128; j >= 1; j--) {
+      const pOffset = mapOffsets[i][j]
+      mapOffsets[i][j] = total;
+      total += pOffset;
+      
+      if (total < min) {
+        min = total;
+      }
+    }
+
+    mapOffsets[i][0] = total;
+    mapBlocks[i][0] = 34;
+    
+    let newMax: i16 = 0;
+    // Move the lines so that their lowest point is 0 & calculate max y value
+    for (let j = 0; j < 129; j++) {
+      mapOffsets[i][j] -= min;
+
+      if (mapOffsets[i][j] > newMax) {
+        newMax =  mapOffsets[i][j];
+      }
+    }
+
+    if (max < newMax) {
+      max = newMax;
+    }
+  }
+
+  max+=3; // Providing more room for fire protection
+
+  printStr("Converting to NBT...");
+  let totalBlocks: i32 = mapW * mapH;
+  
+  const x: i64 = offset+2;
+  const y: i64 = max;
+  const z: i64 = 130;
+  // const totalBlocks = 32;
+
+  // const x: i64 = 7;
+  // const y: i64 = 1;
+  // const z: i64 = 7;
+  
+  const palette = new Array<String>();
+  palette.push("minecraft:air");
+  
+  const blocksList = new Array<Array<Array<i64>>>(<i32>x);
+  for (let i = 0; i < x; i++) {
+    blocksList[i] = new Array<Array<i64>>(<i32>z);
+    for (let j = 0; j < z; j++) {
+      blocksList[i][j] = new Array<i64>(<i32>y);
+      blocksList[i][j].fill(0);
+    }
+  }
+  
+  for (let i = 0; i < offset; i++) {
+    for (let j = 0; j < 129; j++) {
+      let v = palette.indexOf(blocks[mapBlocks[i][j]]);
+      if (v == -1) {
+        v = palette.length;
+        palette.push(blocks[mapBlocks[i][j]]);
+      }
+      blocksList[i+1][j][mapOffsets[i][j]+1] = v;
+    }
+  }
+
+  
+  let bitsPerBlock: i64 = 2;
+  const paletteLen: i64 = palette.length;
+  while (2 ** bitsPerBlock < paletteLen) bitsPerBlock++;
+  const maxVal: i64 = (1 << bitsPerBlock) - 1;
+  const layerSize = x*z;
+
+  const blockStates = new Array<i64>(<i32>((x*y*z*bitsPerBlock) >> 6) + 1);
+  blockStates.fill(0);
+
+  printStr("Writing long array...");
+  for (let k = 0; k < y; k++) {
+    for (let j = 0; j < z; j++) {
+      for (let i = 0; i < x; i++) {
+        // basically stolen from litematica's source code, https://github.com/maruohon/litematica/blob/bbaff6967238773ccbdbc302808d4832ac2697b6/src/main/java/fi/dy/masa/litematica/schematic/container/LitematicaBitArray.java#L43
+        const index = (k*layerSize+j*x+i);
+        const startOffset = index*bitsPerBlock;
+        const startLongOffset = <i32>(startOffset >> 6); // Find the index in the long array the number starts in
+        const endLongOffset = <i32>(((index + 1) * bitsPerBlock - 1) >> 6); // The index in the long array that the number ends in
+        const bitOffset: i32 = <i32>(startOffset & 0b111111); // %64, find the position in the long the number starts in
+        blockStates[startLongOffset] = (blockStates[startLongOffset] & (~(maxVal << bitOffset))) | (blocksList[i][j][k] << bitOffset); // Insert the value in the first long
+        
+        // If the value overflows, send part of it to the other long value
+        if (startLongOffset != endLongOffset) {
+          const endBitOffset = 64 - bitOffset; // Calculate the offset on the other long array
+          const overflowed = bitsPerBlock - endBitOffset; // Calculate the amount of bits that overflowed
+          blockStates[endLongOffset] = ((blockStates[endLongOffset] >>> overflowed) << overflowed) | (blocksList[i][j][k] >> endBitOffset); // Insert the value that overflowed
+        }
+      }
+    }
+  }
+  
+  printStr("Compiling NBT data...");
   const nbt = new NBT("", true, compound, true);
+  
+  const metadata = new NBT("");
+  
+  const enclosingSize = new NBT("");
+  enclosingSize.ints.set("x", <i32>x);
+  enclosingSize.ints.set("y", <i32>y);
+  enclosingSize.ints.set("z", <i32>z);
+  
+  metadata.compounds.set("EnclosingSize", enclosingSize);
+  metadata.strings.set("Author", "Some rando computer");
+  metadata.strings.set("Description", "Some map thingy");
+  metadata.strings.set("Name", "A map");
+  metadata.ints.set("RegionCount", 1);
+  const t = Date.now();
+  metadata.longs.set("TimeCreated", t);
+  metadata.longs.set("TimeModified", t);
+  metadata.ints.set("TotalBlocks", totalBlocks);
+  metadata.ints.set("TotalVolume", <i32>(x*y*z));
+  
+  const regions = new NBT("");
+  
+  const map = new NBT("");
+  
+  const position = new NBT("");
+  position.ints.set("x", 0);
+  position.ints.set("y", 0);
+  position.ints.set("z", 0);
+  
+  const size = new NBT("");
+  size.ints.set("x", <i32>x);
+  size.ints.set("y", <i32>y);
+  size.ints.set("z", <i32>z);
+  
+  const paletteNbt = new NBT("", false, compound);
+  for (let i = 0; i < palette.length; i++) {
+    const paletteElem = new NBT("");
+    paletteElem.strings.set("Name", palette[i]);
+    paletteNbt.compounds.set(palette[i], paletteElem);
+  }
+
+  map.compounds.set("Position", position);
+  map.compounds.set("Size", size);
+  map.lists.set("BlockStatePalette", paletteNbt);
+  map.lists.set("Entities", new NBT("", false, compound));
+  map.lists.set("PendingBlockTicks", new NBT("", false, compound));
+  map.lists.set("PendingFluidTicks", new NBT("", false, compound));
+  map.lists.set("TileEntities", new NBT("", false, compound));
+  map.longArrays.set("BlockStates", blockStates);
+
+  regions.compounds.set("Map", map);
+
+  nbt.compounds.set("Metadata", metadata);
+  nbt.compounds.set("Regions", regions);
+  nbt.ints.set("MinecraftDataVersion", 2230);
+  nbt.ints.set("Version", 5);
 
   return nbt.toUint8Array(nbt.compile());
 }
@@ -598,7 +788,10 @@ class NBT {
     let ret = this.compileInt(len);
 
     for (let i = 0; i < len; i++) {
-      ret = ret.concat(this.compileInt(value[i]));
+      const v = this.compileInt(value[i])
+      for (let j = 0; j < 4; j++) {
+        ret.push(v[j]);
+      }
     }
     return ret;
   }
@@ -608,7 +801,10 @@ class NBT {
     let ret = this.compileInt(len);
 
     for (let i = 0; i < len; i++) {
-      ret = ret.concat(this.compileLong(value[i]));
+      const v = this.compileLong(value[i])
+      for (let j = 0; j < 8; j++) {
+        ret.push(v[j]);
+      }
     }
     return ret;
   }

@@ -31,7 +31,7 @@
     "25, 25, 25": ["black_wool", "black_shulker_box", "black_stained_glass", "blac_glazed_terracotta", "black_concrete", "obsidian", "coal_block", "basalt", "polished_basalt", "netherite_block", "ancient_debris", "crying_obsidian", "respawn_anchor", "blackstone", "polished_blackstone_bricks", "gilded_blackstone"],
     "250, 238, 77": ["gold_block", "bell"],
     "92, 219, 213": ["diamond_block", "beacon", "prismarine_bricks", "dark_prismarine", "conduit"],
-    "74, 128, 255": ["lapis_lazuli_block"],
+    "74, 128, 255": ["lapis_block"],
     "0, 217, 58": ["emerald_block"],
     "129, 86, 49": ["podzol", "spruce_planks", "campfire", "soul_campfire"],
     "112, 2, 0": ["netherrack", "nether_bricks", "nether_gold_ore", "nether_quartz_ore", "magma_block", "red_nether_bricks"],

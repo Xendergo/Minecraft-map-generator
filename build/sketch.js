@@ -87,13 +87,21 @@ var importObject = {
   },
   index: {
     print: (value1) => console.log(value1),
+    printStr: (valuePtr) => {
+      console.log(wasm.__getString(valuePtr));
+      wasm.__release(valuePtr);
+    },
+    printStrArray: (valuePtr) => {
+      console.log(wasm.__getArray(valuePtr).map(v => wasm.__getString(v)));
+    },
     stringToUtf8: (stringPtr) => {
       const v = wasm.__getString(stringPtr);
       wasm.__release(stringPtr);
       const arrPtr = wasm.__retain(wasm.__newArray(wasm.Array8Id, unicodeStringToTypedArray(v)));
       return arrPtr;
     }
-  }
+  },
+  Date
 };
 
 function upload() {
@@ -154,14 +162,16 @@ function downloadSchematic() {
     const len = Object.keys(colors).length;
     const blocks = [];
     for (let i = 0; i < len; i++) {
-      blocks.push("minecraft:" + $(`#${i}`).val());
+      blocks.push(wasm.__retain(wasm.__newString("minecraft:" + $(`#${i}`).val())));
     }
 
     // Send the list and get the litematic file
-    const blocksPtr = wasm.__retain(wasm.__newArray(wasm.stringArray, blocks));
+    const blocksPtr = wasm.__retain(wasm.__newArray(wasm.stringArrayId, blocks));
     const arrayPtr = wasm.compile(blocksPtr);
-    wasm.__release(blocksPtr);
+    blocks.forEach(wasm.__release);
+    // wasm.__release(blocksPtr);
 
+    console.log("Downloading NBT data...");
     // Gzip & download the thingy
     window.open(URL.createObjectURL(new File([pako.gzip(wasm.__getUint8ClampedArray(arrayPtr)).buffer], "map.litematic", {
       type: "application/octet-stream"
