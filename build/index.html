@@ -48,14 +48,17 @@
       Step
     </option>
   </select>
-  <label for="style">Map style</label>
-  <input type="checkbox" name="dithering" id="dithering" onchange="updateDithering(this.checked)" checked>
-  <label for="dithering">Enable dithering</label>
-  <input type="checkbox" name="protect" id="protect" checked>
-  <label for="protect" id="protect" onchange="protectFlammable(this.checked)">Protect flammable blocks</label>
-  <input type="number" min=1 max=200 value=1 onchange="updateWidth(this.value)" id="width"> x <input type="number" min=1
-    max=200 value=1 onchange="updateHeight(this.value)" id="height">
-  <button onclick="updateScreen()">Update preview</button>
+  <label for="style">Map style</label><br>
+  <input type="checkbox" name="dithering" id="dithering" onchange="updateDithering(this.checked)" checked
+    alt="Use floyd-steinberg dithering to make the image look more accurate">
+  <label for="dithering">Enable
+    dithering</label><br>
+  <input type="checkbox" name="protect" id="protect" checked />
+  <label for="protect" id="protect" onchange="protectFlammable(this.checked)"
+    alt="Cover flammable blocks with glass to prevent them from burning">Protect flammable blocks</label><br>
+  Dimensions - <input type="number" min=1 max=200 value=1 onchange="updateWidth(this.value)" id="width"> x <input
+    type="number" min=1 max=200 value=1 onchange="updateHeight(this.value)" id="height"><br>
+  <button onclick="updateScreen()">Update preview</button><br>
   <button onclick="downloadSchematic()">Download schematic</button><br><br>
   <div id="colorSelectors">
     <div id="colors" class="colors"></div>

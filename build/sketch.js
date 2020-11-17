@@ -9,6 +9,12 @@ const preDraw = preC.getContext("2d");
 
 let uploaded = false;
 
+$("#dithering")[0].checked = JSON.parse(localStorage.getItem("dithering")) || true;
+$("#height").val(JSON.parse(localStorage.getItem("height")) || 1);
+$("#step").val(JSON.parse(localStorage.getItem("stepMode")) || "flat");
+$("#width").val(JSON.parse(localStorage.getItem("width")) || 1);
+$("#protect")[0].checked = JSON.parse(localStorage.getItem("flammable")) || true;
+
 let flammable;
 let colors;
 let obj;
@@ -108,7 +114,6 @@ var importObject = {
 
 function upload() {
   if (!this.files || !this.files[0]) return;
-  document.getElementById("file").hidden = true;
   const FR = new FileReader();
   FR.addEventListener("load", (e) => {
     const img = new Image();
@@ -130,6 +135,7 @@ function upload() {
     img.src = e.target.result;
   });
   FR.readAsDataURL(this.files[0]);
+  $("#file").remove();
 }
 
 function updateColors(i) {
@@ -138,24 +144,29 @@ function updateColors(i) {
 
 function updateStepMode(value) {
   wasm.changeStep(value === "step");
+  localStorage.setItem("stepMode", JSON.stringify(value));
 }
 
 function updateDithering(value) {
   wasm.changeDithering(value);
+  localStorage.setItem("dithering", JSON.stringify(value));
 }
 
 function updateWidth(value) {
   wasm.changeWidth(value);
   preC.width = value * 128;
+  localStorage.setItem("width", JSON.stringify(value));
 }
 
 function updateHeight(value) {
   wasm.changeHeight(value);
   preC.height = value * 128;
+  localStorage.setItem("height", JSON.stringify(value));
 }
 
 function protectFlammable(value) {
   wasm.protectFlammable(value);
+  localStorage.setItem("flammable", JSON.stringify(value));
 }
 
 function downloadSchematic() {
