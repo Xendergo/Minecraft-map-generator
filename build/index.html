@@ -33,6 +33,10 @@
     #preview {
       margin-left: 16px;
     }
+
+    p {
+      margin: 0;
+    }
   </style>
 </head>
 
@@ -59,7 +63,15 @@
   Dimensions - <input type="number" min=1 max=200 value=1 onchange="updateWidth(this.value)" id="width"> x <input
     type="number" min=1 max=200 value=1 onchange="updateHeight(this.value)" id="height"><br>
   <button onclick="updateScreen()">Update preview</button><br>
-  <button onclick="downloadSchematic()">Download schematic</button><br><br>
+  <button onclick="downloadSchematic()">Download schematic</button><br><br><br>
+  Presets - <select onchange="changePreset(this.value)" id="presets">
+    <option value="Default" id="Default">
+      Default
+    </option>
+  </select><button onclick="deletePreset()">Delete preset</button><br>
+  <input placeholder="Preset name" id="name">
+  <button onclick="newPreset()">Create new preset</button>
+  <p id="message"></p><br><br>
   <div id="colorSelectors">
     <div id="colors" class="colors"></div>
     <div id="colorsShown" class="colors"></div>

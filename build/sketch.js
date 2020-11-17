@@ -44,7 +44,14 @@ fetch("./colors.json").then(async (res) => {
     const option = $(`<option value="none">none</option>`);
     option.appendTo(selector);
 
+
     selector.appendTo("#colors");
+  }
+
+  const presets = JSON.parse(localStorage.getItem("presets"));
+  const presetKeys = Object.keys(presets);
+  for (let i = 0; i < presetKeys.length; i++) {
+    $(`<option value="${presetKeys[i]}" id="${presetKeys[i]}_preset">${presetKeys[i]}</option>`).appendTo("#presets");
   }
 
   loader.instantiate(fetch('optimized.wasm'), importObject)
@@ -167,6 +174,61 @@ function updateHeight(value) {
 function protectFlammable(value) {
   wasm.protectFlammable(value);
   localStorage.setItem("flammable", JSON.stringify(value));
+}
+
+function changePreset(value) {
+  if (value === "Default") {
+    const keys = Object.keys(colors);
+    const len = keys.length;
+    for (let i = 0; i < len; i++) {
+      $(`#${i}`).val(colors[keys[i]][0]);
+      updateColors(i);
+    }
+  } else {
+    const values = JSON.parse(localStorage.getItem("presets"))[value];
+    const len = values.length;
+    for (let i = 0; i < len; i++) {
+      $(`#${i}`).val(values[i]);
+      updateColors(i);
+    }
+  }
+}
+
+function deletePreset() {
+  const value = $("#presets").val();
+  if (value !== "Default") {
+    const values = JSON.parse(localStorage.getItem("presets"));
+    delete values[value];
+    localStorage.setItem("presets", JSON.stringify(values));
+
+    $(`#${value}_preset`).remove();
+  }
+}
+
+function newPreset() {
+  const name = $("#name").val();
+  console.log(name);
+
+  if (name === "Default") {
+    $("#message").html("haha, no");
+  } else {
+    const presets = JSON.parse(localStorage.getItem("presets")) || {};
+
+    if (presets[name]) {
+      $("#message").html("A preset with that name exists already");
+    } else {
+      presets[name] = [];
+      const len = Object.keys(colors).length;
+      for (let i = 0; i < len; i++) {
+        presets[name].push($(`#${i}`).val());
+      }
+      localStorage.setItem("presets", JSON.stringify(presets));
+
+      $(`<option value=${name} id="${name}_preset">${name}</option>`).appendTo("#presets");
+
+      $("#message").html("Created a new preset");
+    }
+  }
 }
 
 function downloadSchematic() {
