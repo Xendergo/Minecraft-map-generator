@@ -54,7 +54,7 @@ fetch("./colors.json").then(async (res) => {
     $(`<option value="${presetKeys[i]}" id="${presetKeys[i]}_preset">${presetKeys[i]}</option>`).appendTo("#presets");
   }
 
-  loader.instantiate(fetch('optimized.wasm'), importObject)
+  loader.instantiate(fetch('./optimized.wasm'), importObject)
     .then((thingy) => {
       wasm = thingy.exports;
 
