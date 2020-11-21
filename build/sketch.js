@@ -48,7 +48,7 @@ fetch("./colors.json").then(async (res) => {
     selector.appendTo("#colors");
   }
 
-  const presets = JSON.parse(localStorage.getItem("presets"));
+  const presets = JSON.parse(localStorage.getItem("presets") || {});
   const presetKeys = Object.keys(presets);
   for (let i = 0; i < presetKeys.length; i++) {
     $(`<option value="${presetKeys[i]}" id="${presetKeys[i]}_preset">${presetKeys[i]}</option>`).appendTo("#presets");
